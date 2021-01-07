@@ -1,21 +1,36 @@
 = Set up an OpenID Connect authentication for the Sync Gateway
+// BEGIN -- Declare urls used within this content
+:url-authentication: https://docs.couchbase.com/sync-gateway/current/learn/authentication.html
+:url-auth-oidc: {url-authentication}#openid-connect
+:url-admin-api: https://docs.couchbase.com/sync-gateway/current/refer/rest-api-admin.html
+:url-admin-api-post-db-user: {url-admin-api}#/user/post__db___user_
+:url-admin-api-put-db-username: {url-admin-api}#/user/put__db___user__name_
+:url-config-properties: https://docs.couchbase.com/sync-gateway/current/refer/config-properties.html
+:url-config-db-sync: {url-config-properties}#databases-this_db-sync
+:url-config-oidc-prov: {url-config-properties}#databases-this_db-oidc-providers
+:url-getting-started-app: https://docs.couchbase.com/couchbase-lite/current/android/start/java-android-gs-build.html
+:url-keycloak: https://www.keycloak.org
+:url-keycloak-db: {url-keycloak}/docs/latest/server_installation/#_database)
+:url-keycloak-get-started: {url-keycloak}/docs/latest/getting_started/index.html
+:url-keycloak-user-storage: {url-keycloak}/docs/6.0/server_admin/#_user-storage-federation).
+:url-sync-channels: https://docs.couchbase.com/sync-gateway/current/learn/sync-gateway-channels.html#add-to-channel
+:url-users-roles: https://docs.couchbase.com/sync-gateway/current/users-and-roles.html
+// END -- Declare urls used within this content
 
 == Introduction
 
-Sync Gateway supports OpenID Connect. This allows your application to use Couchbase for data synchronization and delegate the authentication to a 3rd party server known as the OpenID Connect Provider (OP).
-See https://docs.couchbase.com/sync-gateway/current/authentication.html#openid-connect
+Sync Gateway supports OpenID Connect. This allows your application to use Couchbase for data synchronization and delegate the authentication to a 3rd party server known as the OpenID Connect Provider (OP) -- see: {url-auth-oidc}
 
 The goal of this tutorial is to set up and configure the different components participating in this authentication process:
 
-. a client : a Java App using, among other libraries, the Mobile CB-Lite Java SDK 2.7.0,
+. a client : a Java App using, among other libraries, the Mobile CB-Lite Java SDK,
 . an OIDC Service Provider (OP) : Keycloak,
 . an OIDC Service Consumer (OC) : Sync Gateway, receiving users credentials from OP and in charge for the authorization part,
 . Couchbase Server storing data and the users profiles (`__sync:user:KEYCLOAKID_` records) .
 
 == Role of the OpenID Connect Service Provider
 
-Keycloak (see https://www.keycloak.org/) has been chosen as the OP for this tutorial as it is well-known open-source, free and Red hat supported component. It is an open source identity and access management solution that can obviously do more than offering an OIDC Service Provider : it can also perform Identify federation, SSO, support other protocols like SAML,...
-For more information, see https://www.keycloak.org/docs/latest/getting_started/index.html
+{url-keycloak}[Keycloak] has been chosen as the OP for this tutorial as it is well-known open-source, free and Red hat supported component. It is an open source identity and access management solution that can obviously do more than offering an OIDC Service Provider : it can also perform Identify federation, SSO, support other protocols like SAML -- for more information, see: {url-keycloak-get-started}.
 
 In the context of this tutorial, two Keycloak (KC) features will be used:
 
@@ -24,7 +39,8 @@ In the context of this tutorial, two Keycloak (KC) features will be used:
 
 == Role of the client
 
-The source code of this tutorial is mainly adapted from the Java CB-Lite "Get Started App' project (see https://docs.couchbase.com/couchbase-lite/2.7/java-platform.html#building-a-getting-started-app). It will perform the retrieval of the ID token and create a user session on the Sync Gateway using the POST /{db}/_session endpoint on the Public REST API with the ID token.
+The source code of this tutorial is mainly adapted from the Java CB-Lite "Get Started App' project -- see {url-getting-started-app}
+It will perform the retrieval of the ID token and create a user session on the Sync Gateway using the POST /{db}/_session endpoint on the Public REST API with the ID token.
 
 This **GettingStartedWithOpenIDConnect** app demonstrates how to :
 
@@ -32,7 +48,7 @@ This **GettingStartedWithOpenIDConnect** app demonstrates how to :
 . use basic functionality of Couchbase Lite Java (replication and use of different channels).
 
 == Role of the Sync Gateway
-With the implicit workflow method, the Sync Gateway will _only_ validate the token, based on the provider definition (see attributes defined in https://docs.couchbase.com/sync-gateway/current/config-properties.html#databases-foo_db-oidc-providers-foo_provider)
+With the implicit workflow method, the Sync Gateway will _only_ validate the token, based on the provider definition -- see attributes defined in {url-config-oidc-prov}.
 
 == Role of Couchbase Server
 As we are using the Sync Gateway, the Couchbase Server cluster will store :
@@ -72,7 +88,7 @@ vi /etc/hosts
 Three docker containers wil be deployed :
 
 . one one-node Couchbase Server 6.5 instance named `cb-server`
-. one Sync Gateway 2.7.2 instance named `sync-gateway`
+. one Sync Gateway instance named `sync-gateway`
 . one Keycloak instance named keycloak`
 
 ==== Pre requisites
@@ -190,8 +206,8 @@ image::bucket_filled.png[width=100%]
 +
 image::SG_account_definition.png[width=70%]
 
- 
-==== Deploy Sync Gateway 2.7.2
+
+==== Deploy Sync Gateway
 
 Note : before deploying the Sync Gateway:
 
@@ -203,9 +219,9 @@ Note : before deploying the Sync Gateway:
 ----
 cd resources
 
-docker run -p 4984-4985:4984-4985 --network workshop2 --name sync-gateway -d -v pwd/SG_sync-gateway-config-french-cuisine.json:/etc/sync_gateway/sync_gateway.json couchbase/sync-gateway:2.7.2-enterprise -adminInterface :4985 /etc/sync_gateway/sync_gateway.json
+docker run -p 4984-4985:4984-4985 --network workshop2 --name sync-gateway -d -v pwd/SG_sync-gateway-config-french-cuisine.json:/etc/sync_gateway/sync_gateway.json couchbase/sync-gateway:2.7.2-enterprise -adminInterface :4985 /etc/sync_gateway/sync_gateway.json <.>
 ----
-
+<.> Change the Sync Gateway version number as necessary
 
 . Sync Gateway logs can be directly accessed from the local TERM1 using the following command:
 +
@@ -320,7 +336,8 @@ image::kc_create_client5.png[width=90%]
 +
 . Users creation
 +
-KC can connect to various sources via User Federation (LDAP and Kerberos) but also offers built-in storage for users and roles  (see https://www.keycloak.org/docs/latest/server_installation/#_database). In this tutorial, we will be using this KC built-in storage. Please refer to the KC documentation for other User Federation technics (see https://www.keycloak.org/docs/6.0/server_admin/#_user-storage-federation).
+KC can connect to various sources via User Federation (LDAP and Kerberos) but also offers built-in storage for users and roles -- see {url-keycloak-db}. In this tutorial, we will be using this KC built-in storage. Please refer to the KC documentation for other User Federation technics -- see: {url-keycloak-user-storage}
+
 +
 
 ..  On the left tab, click on `Users` and `Add user`
@@ -467,7 +484,9 @@ While deploying the Sync Gateway, a reference to the `SG_sync-gateway-config-fre
 <10> The OpenID Connect Service Provider issuer (Keycloak URL endpoint, see previous section).
 <11> The `client_id` is defined at OP level (see previous section)
 <12> Allow any successful logged-in user in KC to automatically create the equivalent user inside Sync Gateway. Note: define users inside the Sync Gateway does not automatically grant access to any channel.
-<13> The sync function (see https://docs.couchbase.com/sync-gateway/current/config-properties.html#databases-foo_db-sync) is filtering on `doc.channels` property. Only those documents are _channeled_ (see https://docs.couchbase.com/sync-gateway/current/sync-gateway-channels.html#add-to-channel) to the corresponding channels.
+<13> The sync function. See here, where it is filtering on the `doc.channels` property -- {url-config-db-sync}. Only those documents are directed to
+the corresponding channels -- see {url-sync-channels} for more on channels.
+
 
 
 ==== Java App code side
@@ -478,7 +497,7 @@ The authorization workflow can be represented as follows:
 
 image::clientauth.png[]
 
-See https://docs.couchbase.com/sync-gateway/current/authentication.html#openid-connect
+See {url-auth-oidc}
 
 
 .A) Global Overview
@@ -513,7 +532,7 @@ Here are the method calls to leverage an OpenID Connect authentication for the S
 
 Now let's explain the role of these 2 static methods.
 
-**Note: The OIDC Authentication with Implicit Flow logic is coded in the `OpenIDConnectHelper.java` file.** 
+**Note: The OIDC Authentication with Implicit Flow logic is coded in the `OpenIDConnectHelper.java` file.**
 
 **Hereafter are some extracted methods from this file.**
 
@@ -525,7 +544,7 @@ Static method `String getTokenID(String dbUser, String dbPass)`:
 ----
 	/**
 	 * Compute tokenID from DBUSER / DBPASS
-	 * 
+	 *
 	 * @param dbUser
 	 * @param dbPass
 	 * @return
@@ -616,7 +635,7 @@ Static method `Cookie createSessionCookie(String idTokenValue)`:
 
 		System.out.println(" >>>> " + response3.getBody());
 
-		Iterator<Cookie> it = response3.getCookies().iterator(); 
+		Iterator<Cookie> it = response3.getCookies().iterator();
 		Cookie resCookie = null;
 
 		while (it.hasNext()) {
@@ -636,7 +655,7 @@ Static method `Cookie createSessionCookie(String idTokenValue)`:
 
 --
 
-== Tests 
+== Tests
 
 The tests are mainly focusing on:
 
@@ -648,7 +667,7 @@ The tests are mainly focusing on:
 
 . Note that, inside the code both the `SYNC_GATEWAY_URL` and Keycloak authentication URL (`KC_OIDC_AUTH_URL`) are **hard-coded**:
 
-..  `SYNC_GATEWAY_URL` : 
+..  `SYNC_GATEWAY_URL` :
 * http version : `http://sync-gateway:4984/french_cuisine/`
 * websocket version : `ws://sync-gateway:4984/french_cuisine`
 ..  `KC_OIDC_AUTH_URL` : `http://keycloak:8080/auth/realms/couchbase/protocol/openid-connect/auth/`
@@ -694,7 +713,7 @@ drwx------  6 fabriceleray  staff   192B 13 avr 16:31 french_cuisine.cblite2
 ~/eclipse-workspace/HelloWorldCBLite2.7/Hello_OpenID_Connect/target(master*) »
 ----
 +
-.. no data has been replicated to the local database (`Total rows returned by query = 0`). **Why that?** 
+.. no data has been replicated to the local database (`Total rows returned by query = 0`). **Why that?**
 +
 This is because, despite the `authentication` process was successful, the `authorization` process is still handled by the Sync Gateway. At that point, `paul` user is _not_ linked to any channels.
 +
@@ -704,7 +723,7 @@ image::paul_sync_document.png[width=90%]
 +
 The `keycloak userID` linked to `paul` user has to be given access to the channels he should belong to, that is to say : paul should be granted access to channel role `Bretagne_region_role`.
 +
-To perform such operation, we need to change paul's channel access role (see https://docs.couchbase.com/sync-gateway/current/users-and-roles.html and https://docs.couchbase.com/sync-gateway/current/admin-rest-api.html#/user/put__db___user__name_).
+To perform such operation, we need to change paul's channel access role -- see: {url-users-roles} and {url-admin-api}.
 +
 Run the following curl command (adapting the `keycloak userID` value to yours) to change paul's role channel settings:
 +
@@ -717,7 +736,7 @@ Refresh your Couchbase Sever Document page in your browser and check again `\_sy
 +
 image::paul_sync_document2.png[width=90%]
 +
-**Note**: of course, it is also possible to directly create users with associated `admin_roles` _before_ user first log in attempt using POST REST calls (see https://docs.couchbase.com/sync-gateway/2.7/admin-rest-api.html#/user/post__db___user_).
+**Note**: of course, it is also possible to directly create users with associated `admin_roles` _before_ user first log in attempt using POST REST calls -- see: {url-admin-api-post-db-user}.
 
 . Re-run the java client App:
 +
